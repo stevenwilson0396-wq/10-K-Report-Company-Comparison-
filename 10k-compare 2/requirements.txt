@@ -1,4 +1,0 @@
-# Only needed for the MD&A sentiment step of pipeline/add_company.py.
-# Without these, add_company.py still works; it just skips sentiment.
-pysentiment2
-vaderSentiment
