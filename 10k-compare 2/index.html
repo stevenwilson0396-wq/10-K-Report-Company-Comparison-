@@ -1,0 +1,1365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10-K Company Comparison</title>
+<meta name="description" content="Compare any two public companies side by side using SEC 10-K filings, stock prices and MD&amp;A sentiment.">
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --surface-2: #f3f2ef;
+    --border: #e1dfda;
+    --grid: #e9e7e2;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #77756f;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --accent: #2a78d6;
+    --focus: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --surface-2: #232322;
+      --border: #3a3936;
+      --grid: #2e2d2b;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #96948b;
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+      --accent: #3987e5;
+      --focus: #3987e5;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --surface-2: #232322;
+    --border: #3a3936;
+    --grid: #2e2d2b;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #96948b;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --accent: #3987e5;
+    --focus: #3987e5;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+  header.top { padding: 28px 0 8px; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+  header.top h1 { margin: 0; font-size: 26px; letter-spacing: -0.01em; }
+  header.top p { margin: 4px 0 0; color: var(--text-secondary); max-width: 62ch; }
+  .btn {
+    font: inherit; color: var(--text-primary); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--text-muted); }
+
+  /* filters: one row above the content they scope */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end;
+    padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 12px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field > label, .field > .lbl { font-size: 12px; color: var(--text-secondary); }
+  select {
+    font: inherit; color: var(--text-primary); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; max-width: 100%;
+  }
+  .field.company { flex: 1 1 250px; max-width: 380px; min-width: 0; }
+  .combo { position: relative; }
+  .combo input {
+    font: inherit; color: var(--text-primary); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; width: 100%; min-width: 0;
+  }
+  .combo ul {
+    position: absolute; left: 0; top: calc(100% + 4px); z-index: 30; width: max(100%, 300px); max-width: calc(100vw - 32px);
+    margin: 0; padding: 4px; list-style: none; max-height: 320px; overflow: auto;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .combo li { padding: 6px 8px; border-radius: 6px; cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+  .combo li .tk { font-weight: 650; min-width: 54px; }
+  .combo li .nm { color: var(--text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .combo li .tag { font-size: 11px; color: var(--text-muted); }
+  .combo li[aria-selected="true"] { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--border); }
+  .combo li.group { cursor: default; display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); padding: 8px 8px 2px; }
+  .combo li.hint { cursor: default; display: block; font-size: 13px; color: var(--text-secondary); }
+  .live { font-size: 13px; color: var(--text-secondary); min-height: 20px; margin-top: 10px; }
+  .live.err { color: #c2410c; }
+  .proxy-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .proxy-row input { flex: 1 1 260px; min-width: 0; font: inherit; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; }
+  .check { display: flex; gap: 8px; align-items: center; padding-bottom: 8px; color: var(--text-secondary); font-size: 14px; }
+  .key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+  .k0 { background: var(--series-1); } .k1 { background: var(--series-2); } .k2 { background: var(--series-3); } .k3 { background: var(--series-4); } .k4 { background: var(--series-5); }
+
+  .notes { margin: 12px 0 0; padding: 0; list-style: none; color: var(--text-secondary); font-size: 13px; }
+  .notes li { margin: 2px 0; }
+
+  nav.tabs { display: flex; gap: 4px; overflow-x: auto; margin: 18px 0 16px; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+  nav.tabs button {
+    font: inherit; font-size: 14px; color: var(--text-secondary); background: none; border: 0;
+    border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; white-space: nowrap;
+  }
+  nav.tabs button[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--accent); font-weight: 600; }
+  nav.tabs button:hover { color: var(--text-primary); }
+
+  h2 { font-size: 18px; margin: 0 0 4px; }
+  .blurb { color: var(--text-secondary); margin: 0 0 14px; max-width: 80ch; }
+
+  /* KPI tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .tile .t-label { font-size: 12px; color: var(--text-secondary); }
+  .tile .t-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 4px; }
+  .tile .t-val { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .tile .t-tk { font-size: 12px; color: var(--text-secondary); }
+
+  /* chart cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+  @media (max-width: 420px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 14px 10px; min-width: 0; }
+  .card h3 { margin: 0; font-size: 15px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 2px; font-size: 12px; color: var(--text-secondary); }
+  .legend .lg { display: inline-flex; align-items: center; gap: 6px; }
+  .lg i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; }
+  .lg i.bar { height: 10px; width: 10px; border: 0; border-radius: 2px; }
+  .lg.s0 i { border-color: var(--series-1); background: var(--series-1); }
+  .lg.s1 i { border-color: var(--series-2); background: var(--series-2); }
+  .lg.s2 i { border-color: var(--series-3); background: var(--series-3); }
+  .lg.s3 i { border-color: var(--series-4); background: var(--series-4); }
+  .lg.s4 i { border-color: var(--series-5); background: var(--series-5); }
+  .chart-wrap { position: relative; }
+  svg.chart { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+  svg.chart text { font-family: inherit; fill: var(--text-secondary); font-size: 11px; }
+  svg.chart .grid-line { stroke: var(--grid); stroke-width: 1; }
+  svg.chart .zero-line { stroke: var(--text-muted); stroke-width: 1; }
+  svg.chart .s0 { --c: var(--series-1); } svg.chart .s1 { --c: var(--series-2); } svg.chart .s2 { --c: var(--series-3); } svg.chart .s3 { --c: var(--series-4); } svg.chart .s4 { --c: var(--series-5); }
+  svg.chart .ln { fill: none; stroke: var(--c); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  svg.chart .dot { fill: var(--c); stroke: var(--surface-1); stroke-width: 2; }
+  svg.chart .bar { fill: var(--c); }
+  svg.chart .end-label { fill: var(--text-primary); font-size: 11px; font-weight: 600; }
+  svg.chart .guide { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  svg.chart .band { fill: var(--text-primary); opacity: .06; }
+  .tip {
+    position: absolute; pointer-events: none; z-index: 5; min-width: 130px;
+    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  }
+  .tip .t-year { color: var(--text-secondary); margin-bottom: 4px; }
+  .tip .t-line { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+  .tip .t-line i { display: inline-block; width: 12px; border-top: 2px solid; }
+  .tip .t-line b { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .tip .t-line span { color: var(--text-secondary); margin-left: auto; }
+  .no-data { text-anchor: middle; }
+  .cnote { margin: 4px 0 2px; font-size: 12px; color: var(--text-muted); }
+
+  /* tables */
+  .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 12px; max-height: 70vh; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 6px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface-1); }
+  thead th { position: sticky; top: 0; background: var(--surface-2); z-index: 2; }
+  thead th:first-child { z-index: 3; background: var(--surface-2); }
+  tr.group td { background: var(--surface-2); font-weight: 650; text-align: left; }
+  td.tk { color: var(--text-secondary); text-align: left; }
+  caption { text-align: left; color: var(--text-secondary); padding: 0 0 8px; font-size: 13px; caption-side: top; }
+
+  details.add { margin: 32px 0 0; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; background: var(--surface-2); }
+  details.add summary { cursor: pointer; font-weight: 650; }
+  details.add ol { padding-left: 20px; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  pre { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; overflow-x: auto; }
+  .msg { font-size: 13px; margin-top: 8px; color: var(--text-secondary); }
+  .msg.err { color: #c2410c; }
+  footer { margin: 28px 0 40px; color: var(--text-muted); font-size: 12px; }
+  .empty { padding: 40px 0; text-align: center; color: var(--text-secondary); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .btn.tiny { font-size: 12px; padding: 2px 8px; border-radius: 6px; }
+  .btn-row { display: flex; align-items: center; flex-wrap: wrap; }
+  .field > label { display: flex; align-items: center; gap: 0; }
+  .field > label .x { margin-left: auto; font: inherit; font-size: 16px; line-height: 1; color: var(--text-muted); background: none; border: 0; cursor: pointer; padding: 0 4px; border-radius: 4px; }
+  .field > label .x:hover { color: var(--text-primary); }
+  .company-fields { display: contents; }
+  h3.sub { font-size: 15px; margin: 18px 0 8px; }
+  .flags { margin: 0 0 6px; padding-left: 20px; font-size: 13px; }
+  .rk { color: var(--text-muted); font-size: 12px; }
+  .cnote.warn { color: var(--text-secondary); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; margin: 0 0 12px; }
+  .toolbar { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  details.checks { font-size: 13px; } details.checks summary { cursor: pointer; }
+  details.checks ul { margin: 6px 0; padding-left: 20px; } details.checks p { margin: 4px 0; color: var(--text-muted); }
+  textarea.csv { width: 100%; height: 160px; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin-top: 8px; }
+  @media print {
+    :root { color-scheme: light; --surface-1: #fff; --surface-2: #f5f5f3; --text-primary: #111; --text-secondary: #444; --text-muted: #666; }
+    body { background: #fff; }
+    .no-print, nav.tabs, .toolbar, #themeBtn, details.add, .combo ul, #addCo, .filters .check, .live { display: none !important; }
+    .card { break-inside: avoid; } .table-wrap { max-height: none; overflow: visible; }
+    .filters input, .filters select { border: 0; padding: 0; background: none; }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>10-K Company Comparison</h1>
+      <p>Compare two to five public companies side by side: financial statements, ratios, stock performance and the tone of management's discussion, all from SEC 10-K filings.</p>
+    </div>
+    <button class="btn" id="themeBtn" type="button" aria-label="Switch color theme">Theme: auto</button>
+  </header>
+
+  <section class="filters" aria-label="Comparison settings">
+    <div class="company-fields" id="companyFields"></div>
+    <button class="btn no-print" id="addCo" type="button" style="align-self:flex-end;margin-bottom:6px">+ Add company</button>
+    <div class="field">
+      <label for="selFrom">From</label>
+      <select id="selFrom"></select>
+    </div>
+    <div class="field">
+      <label for="selTo">To</label>
+      <select id="selTo"></select>
+    </div>
+    <label class="check"><input type="checkbox" id="chkBoth"> Only years every company reports</label>
+  </section>
+  <div class="live" id="liveMsg" role="status" aria-live="polite"></div>
+  <ul class="notes" id="notes"></ul>
+  <div class="toolbar no-print"><button class="btn tiny" id="shareBtn" type="button">Copy link</button><button class="btn tiny" id="printBtn" type="button">Print or save as PDF</button></div>
+
+  <nav class="tabs" role="tablist" id="tabs" aria-label="Analysis sections"></nav>
+  <main id="panel" role="tabpanel" tabindex="-1"></main>
+
+  <details class="add" id="addPanel">
+    <summary>Search any SEC company, or add one from a file</summary>
+    <p><b>Live search.</b> Type in the Company A or Company B box to search every company registered with the SEC. The page then fetches that company's filings and prices and works out every ratio on the spot. Browsers cannot read the SEC directly, so this needs the free proxy in the <code>worker/</code> folder (setup steps are in the README). Paste its address here:</p>
+    <div class="proxy-row">
+      <input id="proxyIn" type="url" inputmode="url" placeholder="https://sec-proxy.yourname.workers.dev" aria-label="Proxy address" autocomplete="off">
+      <button class="btn" id="proxySave" type="button">Save and test</button>
+    </div>
+    <div class="msg" id="proxyMsg" role="status"></div>
+    <p>MD&amp;A tone is not available for companies loaded live, because it needs each filing's full text. To include it, add the company with <code>python pipeline/add_company.py TICKER</code> and commit the files in <code>data/</code> (or use <b>Actions → Add company</b> on GitHub).</p>
+    <p><b>Load a company file:</b> pick a company JSON made by that script and it is added for this visit only.</p>
+    <input type="file" id="fileIn" accept="application/json,.json" aria-label="Load a company JSON file">
+    <div class="msg" id="fileMsg" role="status"></div>
+  </details>
+
+  <footer>
+    Figures come from SEC EDGAR XBRL filings and Yahoo Finance closing prices, processed by the scripts in <code>pipeline/</code>.
+    Fiscal years use each company's own year-end, so the same label can cover different months.
+    Not investment advice. Check important numbers against the filings.
+  </footer>
+</div>
+
+<script src="config.js"></script>
+<script src="js/sec-metrics.js"></script>
+<script src="js/checks.js"></script>
+<script src="js/mda.js"></script>
+<script src="data/companies.js"></script>
+<script>
+"use strict";
+/* ============================================================== metric catalog */
+// fmt: money ($B), pct, pcts (signed pct), ratio, x, days, price, int, tone, pct2
+const CATEGORIES = [
+  { id: "performance", title: "Financials", blurb: "Income statement and balance sheet totals, in billions of dollars.", metrics: [
+    { key: "revenue", label: "Revenue", fmt: "money", kind: "bar" },
+    { key: "gross_profit", label: "Gross profit", fmt: "money", kind: "bar" },
+    { key: "operating_income", label: "Operating income", fmt: "money", kind: "bar" },
+    { key: "ebitda", label: "EBITDA", fmt: "money", kind: "bar", note: "Operating income + depreciation and amortization. Blank where the company doesn't tag depreciation in a standard way." },
+    { key: "net_income", label: "Net income", fmt: "money", kind: "bar", note: "Includes one-off charges and gains, such as tax-law changes." },
+    { key: "total_assets", label: "Total assets", fmt: "money", kind: "bar" },
+    { key: "total_debt", label: "Total debt", fmt: "money", kind: "bar", note: "Long-term debt, its current portion, and commercial paper. Leases are excluded." },
+    { key: "equity", label: "Stockholders' equity", fmt: "money", kind: "bar", note: "Buybacks shrink equity, which inflates ROE and debt/equity." },
+  ]},
+  { id: "cashflow", title: "Cash flow", blurb: "Cash the business produces, what it spends on equipment, and what it hands back to shareholders.", metrics: [
+    { key: "operating_cash_flow", label: "Operating cash flow", fmt: "money", kind: "bar" },
+    { key: "capex", label: "Capital spending", fmt: "money", kind: "bar", note: "Purchases of property and equipment." },
+    { key: "free_cash_flow", label: "Free cash flow", fmt: "money", kind: "bar", note: "Operating cash flow − capital spending." },
+    { key: "fcf_margin", label: "Free cash flow margin", fmt: "pct", kind: "line", note: "Free cash flow ÷ revenue." },
+    { key: "capex_pct_revenue", label: "Capital spending / revenue", fmt: "pct", kind: "line" },
+    { key: "cash_conversion", label: "Cash conversion", fmt: "x", kind: "line", note: "Operating cash flow ÷ net income. Above 1x means profits are backed by cash." },
+    { key: "buybacks", label: "Share buybacks", fmt: "money", kind: "bar" },
+    { key: "dividends_paid", label: "Dividends paid", fmt: "money", kind: "bar" },
+    { key: "payout_ratio", label: "Dividend payout ratio", fmt: "pct", kind: "line", note: "Dividends ÷ net income." },
+    { key: "shareholder_return_pct_fcf", label: "Returned to shareholders / free cash flow", fmt: "pct", kind: "line", note: "(Buybacks + dividends) ÷ free cash flow. Above 100% means it returned more than it generated." },
+  ]},
+  { id: "profitability", title: "Profitability", blurb: "How much of each sales dollar, and of assets and equity, turns into profit.", metrics: [
+    { key: "gross_margin", label: "Gross margin", fmt: "pct", kind: "line" },
+    { key: "operating_margin", label: "Operating margin", fmt: "pct", kind: "line" },
+    { key: "net_margin", label: "Net margin", fmt: "pct", kind: "line" },
+    { key: "roa", label: "Return on assets", fmt: "pct", kind: "line", note: "Net income ÷ year-end total assets." },
+    { key: "roe", label: "Return on equity", fmt: "pct", kind: "line", note: "Net income ÷ year-end equity. Blank when equity is zero or negative." },
+  ]},
+  { id: "growth", title: "Growth", blurb: "How fast each company is growing, and whether the growth looks healthy.", metrics: [
+    { key: "revenue_growth", label: "Revenue growth", fmt: "pcts", kind: "bar", note: "Change from the previous fiscal year." },
+    { key: "operating_income_growth", label: "Operating income growth", fmt: "pcts", kind: "bar" },
+    { key: "net_income_growth", label: "Net income growth", fmt: "pcts", kind: "bar" },
+    { key: "fcf_growth", label: "Free cash flow growth", fmt: "pcts", kind: "bar" },
+    { key: "receivables_growth_gap", label: "Receivables growth minus revenue growth", fmt: "pp", kind: "bar", note: "Percentage points. Persistently positive can mean customers are paying more slowly or sales are being pulled forward." },
+    { key: "inventory_growth_gap", label: "Inventory growth minus revenue growth", fmt: "pp", kind: "bar", note: "Percentage points. Inventory outpacing sales can signal slowing demand." },
+    { key: "accruals_ratio", label: "Accruals ratio", fmt: "pcts", kind: "bar", note: "(Net income − operating cash flow) ÷ total assets. High positive values mean earnings are not backed by cash." },
+  ]},
+  { id: "dupont", title: "DuPont", blurb: "Return on equity broken into the five things that drive it, so you can see why two companies differ.", metrics: [
+    { key: "roe", label: "Return on equity", fmt: "pct", kind: "line" },
+    { key: "tax_burden", label: "Tax burden (net income ÷ pretax income)", fmt: "ratio", kind: "line", note: "Below 1 means taxes took a share of profit." },
+    { key: "interest_burden", label: "Interest burden (pretax income ÷ operating income)", fmt: "ratio", kind: "line", note: "Below 1 means interest costs took a share." },
+    { key: "operating_margin", label: "Operating margin", fmt: "pct", kind: "line" },
+    { key: "asset_turnover", label: "Asset turnover", fmt: "ratio", kind: "line" },
+    { key: "financial_leverage", label: "Financial leverage (assets ÷ equity)", fmt: "ratio", kind: "line" },
+  ]},
+  { id: "liquidity", title: "Liquidity", blurb: "Can the company cover its near-term bills?", naFor: "bank", metrics: [
+    { key: "current_ratio", label: "Current ratio", fmt: "ratio", kind: "line", note: "Current assets ÷ current liabilities." },
+    { key: "quick_ratio", label: "Quick ratio", fmt: "ratio", kind: "line", note: "(Cash and short-term investments + receivables) ÷ current liabilities." },
+    { key: "cash_ratio", label: "Cash ratio", fmt: "ratio", kind: "line", note: "Cash and short-term investments ÷ current liabilities." },
+  ]},
+  { id: "solvency", title: "Solvency", blurb: "How much the company relies on borrowed money.", metrics: [
+    { key: "debt_to_equity", label: "Debt / equity", fmt: "ratio", kind: "line", note: "Blank when equity is zero or negative." },
+    { key: "debt_to_assets", label: "Debt / assets", fmt: "ratio", kind: "line" },
+    { key: "financial_leverage", label: "Financial leverage (assets / equity)", fmt: "ratio", kind: "line" },
+    { key: "interest_coverage", label: "Interest coverage", fmt: "x", kind: "line", note: "Operating income ÷ interest expense. Blank where interest expense isn't reported." },
+  ]},
+  { id: "efficiency", title: "Efficiency", blurb: "How hard the assets work.", naFor: "bank", metrics: [
+    { key: "asset_turnover", label: "Asset turnover", fmt: "ratio", kind: "line", note: "Revenue ÷ year-end total assets." },
+    { key: "inventory_turnover", label: "Inventory turnover", fmt: "x", kind: "line", note: "Cost of goods sold ÷ inventory. Software and service firms hold little inventory, so this can be extreme." },
+    { key: "dsi", label: "Days sales in inventory", fmt: "days", kind: "line" },
+    { key: "receivables_turnover", label: "Receivables turnover", fmt: "x", kind: "line" },
+    { key: "dso", label: "Days sales outstanding", fmt: "days", kind: "line" },
+  ]},
+  { id: "stock", title: "Stock", blurb: "Share price and market value at each fiscal year-end, and how the stock did against the S&P 500.", metrics: [
+    { key: "price", label: "Year-end share price", fmt: "price", kind: "line", note: "Split-adjusted, not dividend-adjusted." },
+    { key: "market_cap", label: "Market value", fmt: "money", kind: "bar", note: "Year-end price × shares on the 10-K cover page, restated for later splits." },
+    { key: "annual_return", label: "Annual price return", fmt: "pcts", kind: "bar", note: "Price change over the fiscal year. Excludes dividends." },
+    { key: "bench_return", label: "S&P 500 over the same year", fmt: "pcts", kind: "bar", note: "S&P 500 price change over each company's own fiscal year. Needs the S&P 500 series: the pipeline saves it to data/benchmark.json, and live search loads it." },
+    { key: "excess_return", label: "Return minus S&P 500", fmt: "pcts", kind: "bar", note: "Annual price return − S&P 500 price change over the same months. Positive means it beat the index." },
+  ]},
+  { id: "valuation", title: "Valuation", blurb: "What the market pays for each dollar of earnings, sales and cash, at each fiscal year-end.", metrics: [
+    { key: "pe_ratio", label: "Price / earnings", fmt: "x", kind: "line", note: "Market value ÷ net income. Blank when net income is negative." },
+    { key: "price_to_sales", label: "Price / sales", fmt: "x", kind: "line", note: "Market value ÷ revenue." },
+    { key: "price_to_book", label: "Price / book", fmt: "x", kind: "line", note: "Market value ÷ equity. Blank when equity is negative." },
+    { key: "ev_to_ebitda", label: "Enterprise value / EBITDA", fmt: "x", kind: "line", note: "(Market value + debt − cash) ÷ EBITDA." },
+    { key: "earnings_yield", label: "Earnings yield", fmt: "pct", kind: "line", note: "Net income ÷ market value." },
+    { key: "fcf_yield", label: "Free cash flow yield", fmt: "pct", kind: "line", note: "Free cash flow ÷ market value." },
+    { key: "dividend_yield", label: "Dividend yield", fmt: "pct2", kind: "line", note: "Dividends paid during the year ÷ year-end market value." },
+    { key: "buyback_yield", label: "Buyback yield", fmt: "pct2", kind: "line", note: "Buybacks during the year ÷ year-end market value." },
+  ]},
+  { id: "quarterly", title: "Quarterly", blurb: "The most recent quarters from 10-Q filings. Each company is shown on its own fiscal quarters, so Q1 can fall in different months.", quarterly: true, metrics: [
+    { key: "revenue", label: "Quarterly revenue", fmt: "money", kind: "bar" },
+    { key: "net_income", label: "Quarterly net income", fmt: "money", kind: "bar" },
+    { key: "revenue_yoy", label: "Revenue growth vs the same quarter last year", fmt: "pcts", kind: "line" },
+    { key: "revenue_ttm", label: "Revenue, last four quarters", fmt: "money", kind: "line" },
+    { key: "net_income_ttm", label: "Net income, last four quarters", fmt: "money", kind: "line" },
+  ]},
+  { id: "sector", title: "Banks & REITs", blurb: "Measures for banks (efficiency, loans against deposits) and real-estate companies (funds from operations). They only fill in for companies of that type.", metrics: [
+    { key: "net_interest_income", label: "Net interest income", fmt: "money", kind: "bar" },
+    { key: "noninterest_income", label: "Noninterest income", fmt: "money", kind: "bar" },
+    { key: "noninterest_expense", label: "Noninterest expense", fmt: "money", kind: "bar" },
+    { key: "efficiency_ratio", label: "Efficiency ratio", fmt: "pct", kind: "line", note: "Noninterest expense ÷ (net interest income + noninterest income). Lower is better." },
+    { key: "loan_to_deposit", label: "Loans / deposits", fmt: "pct", kind: "line" },
+    { key: "nii_to_assets", label: "Net interest income / assets", fmt: "pct2", kind: "line", note: "A simple stand-in for net interest margin, using year-end total assets rather than average earning assets." },
+    { key: "equity_to_assets", label: "Equity / assets", fmt: "pct", kind: "line" },
+    { key: "deposits", label: "Deposits", fmt: "money", kind: "bar" },
+    { key: "loans", label: "Loans", fmt: "money", kind: "bar" },
+    { key: "ffo", label: "Funds from operations (approx.)", fmt: "money", kind: "bar", note: "Net income + depreciation and amortization − gains on property sales. An approximation: it does not adjust for every item a REIT's own FFO does." },
+  ]},
+  { id: "sentiment", title: "MD&A tone", blurb: "The tone of Item 7, Management's Discussion and Analysis, scored with the Loughran-McDonald finance dictionary and VADER.", metrics: [
+    { key: "lm_polarity", label: "Loughran-McDonald polarity", fmt: "tone", kind: "line", note: "(Positive − negative words) ÷ (positive + negative words). Above 0 is net positive." },
+    { key: "vader", label: "VADER average sentiment", fmt: "tone", kind: "line", note: "Average sentence score from −1 to +1." },
+    { key: "pos_sentences", label: "Positive sentences", fmt: "pct", kind: "line" },
+    { key: "neg_sentences", label: "Negative sentences", fmt: "pct", kind: "line" },
+    { key: "uncertainty_pct", label: "Uncertainty words", fmt: "pct2", kind: "line", note: "Share of words such as risk, uncertain, depend." },
+    { key: "litigious_pct", label: "Litigious words", fmt: "pct2", kind: "line", note: "Share of legal terms such as claim, court, regulatory." },
+    { key: "lm_pos_words", label: "Positive words", fmt: "int", kind: "bar" },
+    { key: "lm_neg_words", label: "Negative words", fmt: "int", kind: "bar" },
+    { key: "mda_words", label: "MD&A length (words)", fmt: "int", kind: "bar", note: "Item 7 length varies a lot between companies. Tone scores from short sections rest on little text." },
+  ]},
+];
+const ALL_METRICS = CATEGORIES.filter(c => !c.quarterly).flatMap(c => c.metrics.map(m => ({ ...m, cat: c.title })))
+  .filter((m, i, arr) => arr.findIndex(x => x.key === m.key) === i);   // roe, operating_margin etc. appear in two tabs
+const KPI_KEYS = ["revenue", "net_income", "free_cash_flow", "net_margin", "roe", "market_cap"];
+const SCORE_KEYS = ["revenue", "revenue_growth", "net_income", "free_cash_flow", "gross_margin", "operating_margin", "net_margin", "fcf_margin",
+  "roa", "roe", "current_ratio", "debt_to_equity", "asset_turnover", "market_cap", "pe_ratio", "ev_to_ebitda", "dividend_yield", "annual_return", "lm_polarity"];
+
+/* ================================================================ formatting */
+const trim = (v, d) => { const s = Number(v.toFixed(d)); return (Object.is(s, -0) ? 0 : s).toString(); };
+function fmt(kind, v, axis) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  const a = Math.abs(v);
+  switch (kind) {
+    case "money": {
+      const sg = v < 0 ? "-" : "";
+      if (axis) return a >= 1000 ? `${sg}$${trim(a / 1000, 1)}T` : `${sg}$${trim(a, a < 10 ? 1 : 0)}B`;
+      if (a >= 1000) return `${sg}$${(a / 1000).toFixed(2)}T`;
+      if (a >= 1) return `${sg}$${a.toFixed(1)}B`;
+      return `${sg}$${(a * 1000).toFixed(0)}M`;
+    }
+    case "pct": return `${axis ? trim(v, a < 10 ? 1 : 0) : v.toFixed(1)}%`;
+    case "pp": return axis ? trim(v, 0) : `${v > 0 ? "+" : ""}${v.toFixed(1)} pp`;
+    case "pcts": return `${axis ? trim(v, 0) : (v > 0 ? "+" : "") + v.toFixed(1)}%`;
+    case "pct2": return `${axis ? trim(v, 2) : v.toFixed(2)}%`;
+    case "ratio": return axis ? trim(v, 2) : v.toFixed(2);
+    case "x": return `${axis ? trim(v, a < 10 ? 1 : 0) : v.toFixed(1)}x`;
+    case "days": return axis ? trim(v, 0) : v.toFixed(1);
+    case "price": return `$${axis ? trim(v, a < 10 ? 1 : 0) : v.toFixed(2)}`;
+    case "int": return Math.round(v).toLocaleString("en-US");
+    case "tone": return axis ? trim(v, 2) : v.toFixed(3);
+    default: return String(v);
+  }
+}
+
+/* ===================================================================== state */
+const MAX_SLOTS = 5;
+const CAN_EXPORT = true;          // chart images, print and link copying need a normal browser tab
+const state = { slots: [], from: null, to: null, both: false, tab: "overview" };
+let companies = Array.isArray(window.COMPANIES) ? window.COMPANIES.slice() : [];
+let benchmark = window.BENCHMARK && window.BENCHMARK.prices ? window.BENCHMARK.prices : null;   // S&P 500 closes by date
+
+const dayNum = s => { const p = s.split("-"); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000; };
+const isoDay = n => new Date(n * 86400000).toISOString().slice(0, 10);
+function benchPrice(date) {
+  if (!benchmark) return null;
+  const t = dayNum(date);
+  for (let back = 0; back <= 10; back++) { const v = benchmark[isoDay(t - back)]; if (v !== undefined) return v; }
+  return null;
+}
+const round2 = v => Math.round(v * 100) / 100;
+
+function prepare(c) {            // add the S&P 500 comparison once per company (and again if the benchmark arrives later)
+  c.years.forEach((y, i) => {
+    y.bench_return = null; y.excess_return = null;
+    if (!benchmark) return;
+    const prevDate = i > 0 ? c.years[i - 1].period_end : isoDay(dayNum(y.period_end) - 365);
+    const p1 = benchPrice(y.period_end), p0 = benchPrice(prevDate);
+    if (p1 && p0) {
+      y.bench_return = round2((p1 / p0 - 1) * 100);
+      if (y.annual_return != null) y.excess_return = round2(y.annual_return - y.bench_return);
+    }
+  });
+  return c;
+}
+companies.forEach(prepare);
+const byTicker = t => companies.find(c => c.ticker === t);
+const yearMap = c => new Map(c.years.map(y => [y.fy, y]));
+const slotLetter = i => String.fromCharCode(65 + i);
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+const svgNS = "http://www.w3.org/2000/svg";
+function s(tag, attrs, ...kids) {
+  const el = document.createElementNS(svgNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  for (const kid of kids.flat()) el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+
+/* ================================================================== selection */
+function selection() {
+  const cos = state.slots.map((t, i) => { const c = byTicker(t); return c ? { c, m: yearMap(c), cls: "s" + i, i } : null; }).filter(Boolean);
+  if (cos.length < 2) return null;
+  const all = [...new Set(cos.flatMap(o => o.c.years.map(y => y.fy)))].sort((x, y) => x - y);
+  let years = all.filter(y => y >= state.from && y <= state.to);
+  if (state.both) years = years.filter(y => cos.every(o => o.m.has(y)));
+  return { cos, all, years };
+}
+function seriesFor(sel, key) {
+  return sel.cos.map(o => ({ id: o.c.ticker, cls: o.cls, values: sel.years.map(y => o.m.get(y)?.[key] ?? null) }));
+}
+const yearLabels = years => years.map(y => ({ short: "FY" + String(y).slice(2), full: "FY" + y }));
+
+/* ====================================================================== charts */
+function niceNum(range, round) {
+  const exp = Math.floor(Math.log10(range)), f = range / 10 ** exp;
+  const nf = round ? (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) : (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10);
+  return nf * 10 ** exp;
+}
+function niceScale(min, max) {
+  if (min === max) { if (min === 0) max = 1; else { const d = Math.abs(min) * 0.1; min -= d; max += d; } }
+  const step = niceNum(niceNum(max - min, false) / 4, true);
+  return { min: Math.floor(min / step) * step, max: Math.ceil(max / step) * step, step };
+}
+function roundedBar(x, w, yBase, yTop, r) {         // rounded data-end, square at the baseline
+  const up = yTop <= yBase, hgt = Math.abs(yBase - yTop);
+  r = Math.min(r, w / 2, hgt);
+  if (hgt < 0.5) return "";
+  if (up) return `M${x},${yBase}V${yTop + r}Q${x},${yTop} ${x + r},${yTop}H${x + w - r}Q${x + w},${yTop} ${x + w},${yTop + r}V${yBase}Z`;
+  return `M${x},${yBase}V${yTop - r}Q${x},${yTop} ${x + r},${yTop}H${x + w - r}Q${x + w},${yTop} ${x + w},${yTop - r}V${yBase}Z`;
+}
+
+function chartCard(metric, series, labels, scope) {
+  const W = 360, H = 250, m = { l: 44, r: 38, t: 10, b: 24 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const vals = series.flatMap(x => x.values).filter(v => v !== null);
+  const card = h("div", { class: "card" });
+  const head = h("div", { class: "card-head" }, h("h3", {}, metric.label));
+  card.append(head);
+  card.append(h("div", { class: "legend" }, series.map(x =>
+    h("span", { class: `lg ${x.cls}` }, h("i", { class: metric.kind === "bar" ? "bar" : "" }), x.id))));
+
+  const wrap = h("div", { class: "chart-wrap" });
+  const svg = s("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img", tabindex: vals.length ? "0" : "-1",
+    "aria-label": `${metric.label}, ${series.map(x => x.id).join(" versus ")}, ${labels.length ? labels[0].full + " to " + labels[labels.length - 1].full : "no periods"}. Use the Data tab for exact values.` });
+  wrap.append(svg);
+  card.append(wrap);
+
+  if (!vals.length || !labels.length) {
+    svg.append(s("text", { x: W / 2, y: H / 2, class: "no-data" }, "No data for this metric"));
+    if (metric.note) card.append(h("div", { class: "cnote" }, metric.note));
+    return card;
+  }
+  if (CAN_EXPORT) head.append(h("button", { class: "btn tiny no-print", type: "button", "aria-label": `Download the ${metric.label} chart as an image`,
+    title: "Download as PNG", onclick: () => exportChart(svg, metric.label, series) }, "PNG"));
+
+  const bar = metric.kind === "bar";
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (bar) { lo = Math.min(0, lo); hi = Math.max(0, hi); }
+  const sc = niceScale(lo, hi);
+  const y = v => m.t + ih - (v - sc.min) / (sc.max - sc.min) * ih;
+  const band = iw / labels.length, cx = i => m.l + band * (i + 0.5);
+
+  const ticks = Math.round((sc.max - sc.min) / sc.step);
+  for (let i = 0; i <= ticks; i++) {
+    const v = sc.min + i * sc.step, py = y(v);
+    svg.append(s("line", { class: "grid-line", x1: m.l, x2: W - m.r, y1: py, y2: py }));
+    svg.append(s("text", { x: m.l - 6, y: py + 4, "text-anchor": "end" }, fmt(metric.fmt, v, true)));
+  }
+  if (sc.min < 0 && sc.max > 0) svg.append(s("line", { class: "zero-line", x1: m.l, x2: W - m.r, y1: y(0), y2: y(0) }));
+  const step = Math.ceil(labels.length / 10);
+  labels.forEach((lb, i) => { if ((labels.length - 1 - i) % step === 0)   // anchored to the last period so labels stay evenly spaced
+    svg.append(s("text", { x: cx(i), y: H - 6, "text-anchor": "middle" }, lb.short)); });
+
+  const hoverBand = s("rect", { class: "band", y: m.t, height: ih, width: band, visibility: "hidden" });
+  const guide = s("line", { class: "guide", y1: m.t, y2: m.t + ih, visibility: "hidden" });
+  svg.append(hoverBand, guide);
+
+  const marks = s("g");
+  svg.append(marks);
+  if (bar) {
+    const n = series.length, gap = 2, bw = Math.max(3, Math.min((band * 0.78 - gap * (n - 1)) / n, 26)), base = y(Math.max(0, sc.min));
+    series.forEach((ser, si) => ser.values.forEach((v, i) => {
+      if (v === null) return;
+      const x = cx(i) - (n * bw + (n - 1) * gap) / 2 + si * (bw + gap);
+      marks.append(s("path", { class: `bar ${ser.cls}`, d: roundedBar(x, bw, base, y(v), Math.min(4, bw / 2)) }));
+    }));
+  } else {
+    series.forEach(ser => {
+      let d = "", pen = false;
+      ser.values.forEach((v, i) => { if (v === null) { pen = false; return; } d += `${pen ? "L" : "M"}${cx(i)},${y(v)}`; pen = true; });
+      const g = s("g", { class: ser.cls });
+      if (d) g.append(s("path", { class: "ln", d }));
+      ser.values.forEach((v, i) => { if (v !== null) g.append(s("circle", { class: "dot", cx: cx(i), cy: y(v), r: labels.length > 14 ? 3 : 4 })); });
+      marks.append(g);
+    });
+    // direct labels at the last point of each line, nudged apart if they would collide
+    const ends = series.map(ser => {
+      let i = ser.values.length - 1; while (i >= 0 && ser.values[i] === null) i--;
+      return i < 0 ? null : { id: ser.id, x: cx(i), y: y(ser.values[i]) };
+    }).filter(Boolean).sort((p, q) => p.y - q.y);
+    for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 13) ends[k].y = ends[k - 1].y + 13;
+    ends.forEach(e => svg.append(s("text", { class: "end-label", x: Math.min(e.x + 8, W - 30), y: e.y + 4 }, e.id)));
+  }
+
+  // hover / keyboard layer
+  const tip = h("div", { class: "tip", hidden: true });
+  wrap.append(tip);
+  let idx = -1;
+  function show(i) {
+    idx = Math.max(0, Math.min(labels.length - 1, i));
+    const px = cx(idx);
+    if (bar) { hoverBand.setAttribute("x", px - band / 2); hoverBand.setAttribute("visibility", "visible"); }
+    else { guide.setAttribute("x1", px); guide.setAttribute("x2", px); guide.setAttribute("visibility", "visible"); }
+    tip.replaceChildren(
+      h("div", { class: "t-year" }, labels[idx].full),
+      ...series.map((ser, si) => h("div", { class: "t-line" },
+        h("i", { style: `border-color:var(--series-${(+ser.cls.slice(1)) + 1})` }),
+        h("b", {}, fmt(metric.fmt, ser.values[idx], false)), h("span", {}, ser.id))));
+    tip.hidden = false;
+    const w = svg.getBoundingClientRect().width, left = px / W * w, tw = tip.offsetWidth;
+    tip.style.left = (left + tw + 18 > w ? left - tw - 12 : left + 12) + "px";
+    tip.style.top = "8px";
+  }
+  function hide() { idx = -1; tip.hidden = true; hoverBand.setAttribute("visibility", "hidden"); guide.setAttribute("visibility", "hidden"); }
+  const hit = s("rect", { x: m.l, y: m.t, width: iw, height: ih, fill: "transparent" });
+  svg.append(hit);
+  const fromEvent = e => { const r = svg.getBoundingClientRect(); return Math.floor(((e.clientX - r.left) / r.width * W - m.l) / band); };
+  hit.addEventListener("pointermove", e => show(fromEvent(e)));
+  hit.addEventListener("pointerleave", hide);
+  hit.addEventListener("pointerdown", e => show(fromEvent(e)));
+  svg.addEventListener("focus", () => show(idx < 0 ? labels.length - 1 : idx));
+  svg.addEventListener("blur", hide);
+  svg.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight") { show(idx + 1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft") { show(idx - 1); e.preventDefault(); }
+    else if (e.key === "Escape") hide();
+  });
+
+  if (metric.note) card.append(h("div", { class: "cnote" }, metric.note));
+  return card;
+}
+
+// Saves one chart as a PNG. The page's colours come from CSS variables, so each element's
+// computed style is copied into the image before it is drawn.
+function exportChart(svg, title, series) {
+  const clone = svg.cloneNode(true);
+  const srcEls = [svg, ...svg.querySelectorAll("*")], dstEls = [clone, ...clone.querySelectorAll("*")];
+  const props = ["fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "opacity", "fill-opacity",
+    "font-size", "font-family", "font-weight", "text-anchor", "stroke-dasharray", "visibility", "display"];
+  srcEls.forEach((el, i) => { const cs = getComputedStyle(el); props.forEach(p => dstEls[i].style.setProperty(p, cs.getPropertyValue(p))); });
+  clone.querySelectorAll("rect[fill='transparent']").forEach(el => el.remove());
+  clone.setAttribute("xmlns", svgNS);
+  const vb = svg.viewBox.baseVal, scale = 3, headH = 52;
+  const bodyCs = getComputedStyle(document.body);
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement("canvas");
+    cv.width = vb.width * scale; cv.height = (vb.height + headH) * scale;
+    const ctx = cv.getContext("2d");
+    ctx.scale(scale, scale);
+    ctx.fillStyle = bodyCs.backgroundColor; ctx.fillRect(0, 0, vb.width, vb.height + headH);
+    ctx.fillStyle = bodyCs.color; ctx.font = "600 15px " + bodyCs.fontFamily; ctx.textBaseline = "alphabetic";
+    ctx.fillText(title, 12, 22);
+    ctx.font = "12px " + bodyCs.fontFamily;
+    let x = 12;
+    series.forEach(ser => {
+      const keyEl = document.querySelector(`.lg.${ser.cls} i`);
+      ctx.fillStyle = keyEl ? getComputedStyle(keyEl).backgroundColor : bodyCs.color;
+      ctx.fillRect(x, 33, 10, 10); x += 14;
+      ctx.fillStyle = bodyCs.color; ctx.fillText(ser.id, x, 42); x += ctx.measureText(ser.id).width + 16;
+    });
+    ctx.drawImage(img, 0, headH, vb.width, vb.height);
+    cv.toBlob(blob => {
+      const a = h("a", { href: URL.createObjectURL(blob), download: title.replace(/[^\w]+/g, "_").replace(/^_|_$/g, "") + ".png" });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }, "image/png");
+  };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+}
+
+/* ======================================================================= views */
+const metricOf = k => ALL_METRICS.find(x => x.key === k);
+function kpiYear(sel) {          // latest year in range where every company has revenue
+  const common = sel.years.filter(y => sel.cos.every(o => o.m.get(y)?.revenue != null));
+  return common.length ? common[common.length - 1] : null;
+}
+function overview(sel) {
+  const root = h("div");
+  const yr = kpiYear(sel), n = sel.cos.length;
+  root.append(h("h2", {}, yr ? `Snapshot: FY${yr}` : "Snapshot"));
+  root.append(h("p", { class: "blurb" }, yr ? `Latest year in range where ${n > 2 ? "all companies have" : "both companies have"} reported.` : `No year in this range has data for ${n > 2 ? "all the companies" : "both companies"}.`));
+  if (!yr) return root;
+  const recs = sel.cos.map(o => o.m.get(yr));
+  const tiles = h("div", { class: "tiles" });
+  for (const k of KPI_KEYS) {
+    const m = metricOf(k);
+    tiles.append(h("div", { class: "tile" }, h("div", { class: "t-label" }, m.label),
+      ...sel.cos.map((o, i) => h("div", { class: "t-row" }, h("span", { class: "t-val" }, fmt(m.fmt, recs[i][k])),
+        h("span", { class: "t-tk" }, h("span", { class: `key k${o.i}` }), o.c.ticker)))));
+  }
+  root.append(tiles);
+
+  root.append(h("h2", {}, n > 2 ? "Ranking" : "Side by side"));
+  root.append(h("p", { class: "blurb" }, n > 2
+    ? `FY${yr}. The number in brackets ranks the companies on each line, 1 being the highest value. A higher value is not always better (for example debt / equity).`
+    : `FY${yr}. "Higher" shows which company has the larger number. It is not a verdict on which is better.`));
+  const body = h("tbody");
+  for (const k of SCORE_KEYS) {
+    const m = metricOf(k), vals = recs.map(r => r[k]);
+    const have = vals.map((v, i) => [v, i]).filter(p => p[0] != null).sort((p, q) => q[0] - p[0]);
+    const rank = new Map(); have.forEach(([v, i], r) => rank.set(i, have.findIndex(p => p[0] === v) + 1));
+    let higher = "—";
+    if (have.length === n) higher = have.length > 1 && have[0][0] === have[1][0] ? "Equal" : sel.cos[have[0][1]].c.ticker;
+    body.append(h("tr", {}, h("td", {}, m.label),
+      ...vals.map((v, i) => h("td", {}, fmt(m.fmt, v), n > 2 && rank.has(i) ? h("span", { class: "rk" }, ` (${rank.get(i)})`) : "")),
+      h("td", { style: "text-align:left" }, higher)));
+  }
+  root.append(h("div", { class: "table-wrap" }, h("table", { class: "score" },
+    h("caption", { class: "sr" }, `Side-by-side values for FY${yr}`),
+    h("thead", {}, h("tr", {}, h("th", {}, "Metric"), ...sel.cos.map(o => h("th", {}, o.c.ticker)), h("th", { style: "text-align:left" }, "Highest"))), body)));
+  return root;
+}
+
+// ---- Growth: compound growth, margin change, and a few earnings-quality flags
+function cagr(co, key, years) {
+  const pts = years.map(y => [y, co.m.get(y)?.[key]]).filter(p => p[1] != null && p[1] > 0);
+  if (pts.length < 2) return null;
+  const [y0, v0] = pts[0], [y1, v1] = pts[pts.length - 1];
+  return y1 > y0 ? (Math.pow(v1 / v0, 1 / (y1 - y0)) - 1) * 100 : null;
+}
+function growthExtra(sel) {
+  const root = h("div");
+  if (sel.years.length < 2) return root;
+  const first = sel.years[0], last = sel.years[sel.years.length - 1];
+  root.append(h("h3", { class: "sub" }, `Growth over FY${first} to FY${last}`));
+  const rows = [["Revenue", "revenue"], ["Operating income", "operating_income"], ["Net income", "net_income"], ["Free cash flow", "free_cash_flow"]];
+  const body = h("tbody");
+  rows.forEach(([label, key]) => body.append(h("tr", {}, h("td", {}, `${label}, compound annual growth`),
+    ...sel.cos.map(o => h("td", {}, fmt("pcts", cagr(o, key, sel.years)))))));
+  const mchg = key => sel.cos.map(o => {
+    const pts = sel.years.map(y => o.m.get(y)?.[key]).filter(v => v != null);
+    return pts.length >= 2 ? pts[pts.length - 1] - pts[0] : null;
+  });
+  [["Operating margin change", "operating_margin"], ["Net margin change", "net_margin"]].forEach(([label, key]) =>
+    body.append(h("tr", {}, h("td", {}, label), ...mchg(key).map(v => h("td", {}, fmt("pp", v))))));
+  root.append(h("div", { class: "table-wrap" }, h("table", { class: "score" },
+    h("caption", { class: "sr" }, "Growth summary"),
+    h("thead", {}, h("tr", {}, h("th", {}, "Measure"), ...sel.cos.map(o => h("th", {}, o.c.ticker)))), body)));
+  root.append(h("p", { class: "cnote" }, "Compound growth uses the first and last years in range with a positive value, so it is blank when profits were negative."));
+
+  const flags = [];
+  sel.cos.forEach(o => sel.years.forEach(y => {
+    const r = o.m.get(y); if (!r) return;
+    if (r.receivables_growth_gap != null && r.receivables_growth_gap > 10)
+      flags.push(`${o.c.ticker} FY${y}: receivables grew ${r.receivables_growth_gap.toFixed(0)} percentage points faster than revenue.`);
+    if (r.inventory_growth_gap != null && r.inventory_growth_gap > 10)
+      flags.push(`${o.c.ticker} FY${y}: inventory grew ${r.inventory_growth_gap.toFixed(0)} percentage points faster than revenue.`);
+    if (r.accruals_ratio != null && r.accruals_ratio > 10)
+      flags.push(`${o.c.ticker} FY${y}: net income exceeded operating cash flow by ${r.accruals_ratio.toFixed(0)}% of assets.`);
+  }));
+  root.append(h("h3", { class: "sub" }, "Things to look at more closely"));
+  if (flags.length) {
+    root.append(h("ul", { class: "flags" }, flags.slice(0, 12).map(f => h("li", {}, f))));
+    if (flags.length > 12) root.append(h("p", { class: "cnote" }, `${flags.length - 12} more not shown.`));
+    root.append(h("p", { class: "cnote" }, "These are prompts to read the filing, not proof of a problem. Growth through acquisitions and seasonal timing both trigger them."));
+  } else root.append(h("p", { class: "cnote" }, "Nothing crossed the thresholds (receivables or inventory growing more than 10 points faster than revenue, or accruals above 10% of assets)."));
+  return root;
+}
+
+// ---- DuPont: the five factors for the latest common year, and which one explains the ROE gap
+const DUPONT = [["tax_burden", "Tax burden"], ["interest_burden", "Interest burden"], ["operating_margin", "Operating margin"],
+  ["asset_turnover", "Asset turnover"], ["financial_leverage", "Leverage"]];
+function dupontExtra(sel) {
+  const root = h("div");
+  const common = sel.years.filter(y => sel.cos.every(o => DUPONT.every(([k]) => o.m.get(y)?.[k] != null) && o.m.get(y)?.roe != null));
+  root.append(h("h3", { class: "sub" }, "ROE bridge"));
+  if (!common.length) { root.append(h("p", { class: "cnote" }, "No year in range has every factor for every company, so the bridge is not shown. Banks and companies with negative equity or pretax income usually can't be split this way.")); return root; }
+  const yr = common[common.length - 1];
+  const body = h("tbody");
+  sel.cos.forEach(o => {
+    const r = o.m.get(yr), prod = r.tax_burden * r.interest_burden * r.operating_margin * r.asset_turnover * r.financial_leverage;
+    body.append(h("tr", {}, h("td", { class: "tk" }, h("span", { class: `key k${o.i}` }), o.c.ticker),
+      h("td", {}, r.tax_burden.toFixed(2)), h("td", {}, r.interest_burden.toFixed(2)), h("td", {}, fmt("pct", r.operating_margin)),
+      h("td", {}, r.asset_turnover.toFixed(2)), h("td", {}, r.financial_leverage.toFixed(2)),
+      h("td", {}, h("b", {}, fmt("pct", r.roe)), h("span", { class: "rk" }, ` (factors multiply to ${prod.toFixed(1)}%)`))));
+  });
+  root.append(h("div", { class: "table-wrap" }, h("table", { class: "score" },
+    h("caption", { class: "sr" }, `ROE bridge for FY${yr}`),
+    h("thead", {}, h("tr", {}, h("th", {}, `FY${yr}`), ...DUPONT.map(([, l]) => h("th", {}, l)), h("th", {}, "= Return on equity"))), body)));
+  const A = sel.cos[0].m.get(yr), B = sel.cos[1].m.get(yr);
+  if (A.roe > 0 && B.roe > 0) {
+    const parts = DUPONT.map(([k, l]) => [l, Math.log(A[k] / B[k])]), total = parts.reduce((a, p) => a + p[1], 0);
+    if (Math.abs(total) > 0.02) {
+      const top = parts.slice().sort((p, q) => Math.abs(q[1]) - Math.abs(p[1]))[0];
+      const hi = total > 0 ? sel.cos[0].c.ticker : sel.cos[1].c.ticker, lo = total > 0 ? sel.cos[1].c.ticker : sel.cos[0].c.ticker;
+      root.append(h("p", { class: "blurb" }, `${hi} earns the higher return on equity of the first two companies. The biggest reason is ${top[0].toLowerCase()}, which accounts for about ${Math.round(Math.abs(top[1] / total) * 100)}% of the gap in log terms; ${lo} is lower on that factor${top[1] * total > 0 ? "" : " in the other direction"}.`));
+    }
+  }
+  root.append(h("p", { class: "cnote" }, "Return on equity = tax burden × interest burden × operating margin × asset turnover × leverage. Differences in the last number come from rounding."));
+  return root;
+}
+
+// ---- Quarterly
+function quarterLabel(q) { return { short: `Q${q.q} '${String(q.fy).slice(2)}`, full: `Q${q.q} FY${q.fy}` }; }
+function quarterlyView(cat, sel) {
+  const root = h("div");
+  root.append(h("h2", {}, cat.title), h("p", { class: "blurb" }, cat.blurb));
+  const keyOf = q => q.fy * 10 + q.q;
+  const all = [...new Set(sel.cos.flatMap(o => (o.c.quarters || []).map(keyOf)))].sort((a, b) => a - b).slice(-12);
+  if (!all.length) { root.append(h("div", { class: "empty" }, "No quarterly data for these companies. Run pipeline/add_company.py again to add it, or load the company with live search.")); return root; }
+  const labels = all.map(k => quarterLabel({ fy: Math.floor(k / 10), q: k % 10 }));
+  const per = sel.cos.map(o => {
+    const rows = new Map((o.c.quarters || []).map(q => [keyOf(q), q]));
+    const get = (k, f) => rows.get(k)?.[f] ?? null;
+    const ttm = (k, f) => {            // sum of this quarter and the three before it (needs all four)
+      const ks = [...rows.keys()].sort((a, b) => a - b), i = ks.indexOf(k);
+      if (i < 3) return null;
+      const vs = ks.slice(i - 3, i + 1).map(kk => rows.get(kk)[f]);
+      return vs.every(v => v != null) ? vs.reduce((a, b) => a + b, 0) : null;
+    };
+    return { o, rows, get, ttm };
+  });
+  const seriesOf = fn => per.map(p => ({ id: p.o.c.ticker, cls: p.o.cls, values: all.map(k => fn(p, k)) }));
+  const builders = {
+    revenue: p => k => p.get(k, "revenue"),
+    net_income: p => k => p.get(k, "net_income"),
+    revenue_yoy: p => k => { const a = p.get(k, "revenue"), b = p.get(k - 10, "revenue"); return a != null && b != null && b > 0 ? round2((a / b - 1) * 100) : null; },
+    revenue_ttm: p => k => p.ttm(k, "revenue"),
+    net_income_ttm: p => k => p.ttm(k, "net_income"),
+  };
+  const grid = h("div", { class: "grid" });
+  cat.metrics.forEach(m => grid.append(chartCard(m, seriesOf((p, k) => builders[m.key](p)(k)), labels)));
+  root.append(grid);
+  return root;
+}
+
+function categoryView(cat, sel) {
+  if (cat.quarterly) return quarterlyView(cat, sel);
+  const root = h("div");
+  root.append(h("h2", {}, cat.title), h("p", { class: "blurb" }, cat.blurb));
+  const kinds = sel.cos.filter(o => o.c.kind === "bank" || o.c.kind === "reit");
+  if (cat.naFor) {
+    const banks = sel.cos.filter(o => o.c.kind === cat.naFor).map(o => o.c.ticker);
+    if (banks.length) root.append(h("p", { class: "cnote warn" }, `${banks.join(", ")} looks like a bank, which doesn't report current assets, inventory or a gross profit line, so some of these charts are blank for it by design.`));
+  }
+  if (cat.id === "sector" && !kinds.length)
+    root.append(h("p", { class: "cnote warn" }, "None of the selected companies looks like a bank or real-estate company, so these charts are mostly empty."));
+  if (!sel.years.length) { root.append(h("div", { class: "empty" }, "No years selected.")); return root; }
+  if (cat.id === "growth") root.append(growthExtra(sel));
+  if (cat.id === "dupont") root.append(dupontExtra(sel));
+  const grid = h("div", { class: "grid" });
+  const labels = yearLabels(sel.years);
+  cat.metrics.forEach(m => grid.append(chartCard(m, seriesFor(sel, m.key), labels)));
+  root.append(grid);
+  return root;
+}
+
+const filingUrl = (c, y) => y && y.filing_accn && c.cik
+  ? `https://www.sec.gov/Archives/edgar/data/${String(+c.cik)}/${y.filing_accn.replace(/-/g, "")}/${y.filing_accn}-index.htm` : null;
+function dataView(sel) {
+  const root = h("div");
+  root.append(h("h2", {}, "All numbers"), h("p", { class: "blurb" }, "Every value behind the charts. Dollar amounts are in billions. Blank cells mean the filing didn't report it."));
+  root.append(csvButtons(sel));
+  root.append(h("div", { style: "height:12px" }));
+  const head = h("tr", {}, h("th", {}, "Metric"), h("th", { style: "text-align:left" }, "Company"), ...sel.years.map(y => h("th", {}, "FY" + y)));
+  const body = h("tbody");
+  const seen = new Set();
+  for (const cat of CATEGORIES.filter(c => !c.quarterly)) {
+    const metrics = cat.metrics.filter(m => !seen.has(m.key));
+    if (!metrics.length) continue;
+    body.append(h("tr", { class: "group" }, h("td", { colspan: sel.years.length + 2 }, cat.title)));
+    for (const m of metrics) {
+      seen.add(m.key);
+      sel.cos.forEach((o, i) => body.append(h("tr", {},
+        h("td", {}, i === 0 ? m.label : ""), h("td", { class: "tk" }, h("span", { class: `key k${o.i}` }), o.c.ticker),
+        ...sel.years.map(y => h("td", {}, fmt(m.fmt, o.m.get(y)?.[m.key]))))));
+    }
+  }
+  body.append(h("tr", { class: "group" }, h("td", { colspan: sel.years.length + 2 }, "Source filings (SEC EDGAR)")));
+  sel.cos.forEach(o => body.append(h("tr", {}, h("td", {}, o === sel.cos[0] ? "10-K filing" : ""), h("td", { class: "tk" }, h("span", { class: `key k${o.i}` }), o.c.ticker),
+    ...sel.years.map(y => {
+      const rec = o.m.get(y), url = filingUrl(o.c, rec);
+      return h("td", {}, url ? h("a", { href: url, target: "_blank", rel: "noopener" }, rec.filed ? rec.filed.slice(2) : "view") : "—");
+    }))));
+  root.append(h("div", { class: "table-wrap" }, h("table", {}, h("thead", {}, head), body)));
+  root.append(h("p", { class: "cnote" }, "Each link opens the filing the figures come from. The date shown is when it was filed. If a company restated a number later, the page uses the restated value from the newer filing."));
+  return root;
+}
+function csvText(sel) {
+  const q = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
+  const rows = [["ticker", "company", "fiscal_year", "period_end", "filing", "category", "metric", "value", "unit"]];
+  const unit = { money: "USD billions", pp: "percentage points", pct: "%", pcts: "%", pct2: "%", ratio: "", x: "x", days: "days", price: "USD", int: "count", tone: "score" };
+  for (const o of sel.cos)
+    for (const y of sel.years) { const rec = o.m.get(y); if (!rec) continue;
+      for (const m of ALL_METRICS) rows.push([o.c.ticker, o.c.name, y, rec.period_end, filingUrl(o.c, rec) || "", m.cat, m.label, rec[m.key] ?? "", unit[m.fmt]]); }
+  return rows.map(r => r.map(q).join(",")).join("\n");
+}
+function csvButtons(sel) {
+  const wrap = h("div", { class: "btn-row" });
+  const msg = h("span", { class: "msg", role: "status", style: "margin-left:10px" });
+  if (CAN_EXPORT) wrap.append(h("button", { class: "btn", type: "button", onclick: () => {
+    const blob = new Blob([csvText(sel)], { type: "text/csv" });
+    const a = h("a", { href: URL.createObjectURL(blob), download: sel.cos.map(o => o.c.ticker).join("_vs_") + ".csv" });
+    document.body.append(a); a.click(); a.remove();
+  } }, "Download CSV"));
+  else {
+    const btn = h("button", { class: "btn", type: "button" }, "Copy as CSV");
+    btn.addEventListener("click", () => copyCsv(sel, btn, msg, wrap));
+    wrap.append(btn);
+  }
+  wrap.append(msg);
+  return wrap;
+}
+function copyCsv(sel, btn, msg, root) {
+  const text = csvText(sel);
+  const manual = () => {
+    let ta = root.parentNode.querySelector("textarea.csv");
+    if (!ta) { ta = h("textarea", { class: "csv", readonly: true, "aria-label": "CSV text" }); root.after(ta); }
+    ta.value = text; ta.focus(); ta.select();
+    msg.textContent = "Copying was blocked. The CSV is selected below: press Ctrl/Cmd+C.";
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(text).then(() => { msg.textContent = `Copied ${text.split("\n").length - 1} rows. Paste into a spreadsheet.`; }, manual);
+  else manual();
+}
+
+/* ====================================================================== render */
+const TABS = [{ id: "overview", title: "Overview" }, ...CATEGORIES.map(c => ({ id: c.id, title: c.title })), { id: "data", title: "Data table" }];
+
+function renderNotes(sel) {
+  const ul = document.getElementById("notes"); ul.replaceChildren();
+  const add = (...kids) => { const li = h("li", {}, ...kids); ul.append(li); return li; };
+  const fye = [...new Set(sel.cos.map(o => o.c.fiscal_year_end).filter(Boolean))];
+  if (fye.length > 1)
+    add(`Fiscal years end in different months (${sel.cos.map(o => `${o.c.ticker}: ${o.c.fiscal_year_end}`).join(", ")}), so the same fiscal-year label covers different months.`);
+  for (const o of sel.cos) if (o.c.live) {
+    const li = add(`${o.c.ticker} was loaded live from SEC filings, so ${o.c.tone_loaded ? "its MD&A scores cover length, uncertainty words and legal words. Polarity and sentence scores need pipeline/add_company.py." : "it has no MD&A tone scores yet."} `);
+    if (!o.c.tone_loaded && typeof loadTone === "function" && proxyBase())
+      li.append(h("button", { class: "btn tiny", type: "button", onclick: e => loadTone(o.c, e.target) }, "Score MD&A tone"));
+  }
+  for (const o of sel.cos) {
+    const missing = sel.years.filter(y => !o.m.has(y));
+    if (missing.length) add(`${o.c.ticker} has no data for ${missing.map(y => "FY" + y).join(", ")}; those points are left blank.`);
+  }
+  const problems = [];
+  if (window.SecChecks) for (const o of sel.cos)
+    window.SecChecks.checkRecords(o.c.years.filter(y => sel.years.includes(y.fy))).forEach(w => problems.push(`${o.c.ticker} FY${w.fy}: ${w.message}`));
+  if (problems.length) {
+    const d = h("details", { class: "checks" }, h("summary", {}, `Data checks: ${problems.length} thing${problems.length > 1 ? "s" : ""} to look at`),
+      h("ul", {}, problems.slice(0, 15).map(p => h("li", {}, p))));
+    if (problems.length > 15) d.append(h("p", {}, `${problems.length - 15} more not shown.`));
+    d.append(h("p", {}, "These checks catch tagging quirks and obvious errors in the filing data. They do not mean the company's accounts are wrong."));
+    add(d);
+  }
+}
+function render() {
+  const sel = selection(), panel = document.getElementById("panel");
+  if (!sel) {
+    document.getElementById("notes").replaceChildren();
+    panel.replaceChildren(h("div", { class: "empty" }, companies.length < 2 ? "Add at least two companies to data/ (see the box below) to start comparing."
+      : state.slots.some(t => !byTicker(t)) ? "Loading companies…" : "Pick at least two companies."));
+    return;
+  }
+  renderNotes(sel);
+  let view;
+  if (state.tab === "overview") view = overview(sel);
+  else if (state.tab === "data") view = dataView(sel);
+  else view = categoryView(CATEGORIES.find(c => c.id === state.tab) || CATEGORIES[0], sel);
+  panel.replaceChildren(view);
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
+  writeHash();
+}
+function fillSelect(el, options, value) {
+  el.replaceChildren(...options.map(([v, t]) => h("option", { value: v }, t)));
+  el.value = String(value);
+}
+function refreshCompanies() {
+  state.slots.forEach((t, i) => {
+    const el = document.getElementById("in" + i);
+    if (el && document.activeElement !== el) el.value = labelOf(t);   // never overwrite what is being typed
+  });
+}
+function resetYears() {
+  const cos = state.slots.map(byTicker).filter(Boolean);
+  if (!cos.length) return;
+  const all = [...new Set(cos.flatMap(c => c.years.map(y => y.fy)))].sort((x, y) => x - y);
+  state.from = all[0]; state.to = all[all.length - 1];
+  fillYears(all);
+}
+function fillYears(all) {
+  const opts = all.map(y => [y, "FY" + y]);
+  fillSelect(document.getElementById("selFrom"), opts, state.from);
+  fillSelect(document.getElementById("selTo"), opts, state.to);
+}
+
+/* ------------------------------------------------------------ company pickers */
+function buildPickers() {
+  const box = document.getElementById("companyFields");
+  box.replaceChildren(...state.slots.map((t, i) => h("div", { class: "field company" },
+    h("label", { for: "in" + i }, h("span", { class: `key k${i}` }), "Company " + slotLetter(i),
+      state.slots.length > 2 ? h("button", { class: "x no-print", type: "button", "aria-label": `Remove company ${slotLetter(i)}`, title: "Remove", onclick: () => removeSlot(i) }, "×") : ""),
+    h("div", { class: "combo" },
+      h("input", { id: "in" + i, type: "text", role: "combobox", "aria-expanded": "false", "aria-controls": "list" + i, "aria-autocomplete": "list",
+        autocomplete: "off", spellcheck: "false", placeholder: "Search any company" }),
+      h("ul", { id: "list" + i, role: "listbox", "aria-label": `Company ${slotLetter(i)} suggestions`, hidden: true })))));
+  state.slots.forEach((_, i) => makeCombo(i));
+  updateAddButton();
+  refreshCompanies();
+}
+// Hidden at five companies, and when there is nothing left to add (no proxy and every loaded company is already chosen).
+function updateAddButton() {
+  document.getElementById("addCo").hidden = state.slots.length >= MAX_SLOTS || (!proxyBase() && companies.length <= state.slots.filter(Boolean).length);
+}
+function addSlot() {
+  if (state.slots.length >= MAX_SLOTS) return;
+  const next = companies.find(c => !state.slots.includes(c.ticker));
+  state.slots.push(next ? next.ticker : "");
+  buildPickers(); resetYears(); render();
+  const el = document.getElementById("in" + (state.slots.length - 1)); if (el) el.focus();
+}
+function removeSlot(i) {
+  if (state.slots.length <= 2) return;
+  state.slots.splice(i, 1);
+  liveTokens.length = 0;                                   // cancel loads: slot numbers just changed
+  setLive("");
+  buildPickers(); resetYears(); render();
+}
+// Put `ticker` in slot i. If another slot already holds it, the two swap so no company appears twice.
+function setSlot(i, ticker) {
+  const j = state.slots.findIndex((t, k) => k !== i && t === ticker);
+  if (j >= 0) state.slots[j] = state.slots[i];
+  state.slots[i] = ticker;
+}
+
+/* --------------------------------------------------------------------- hash */
+function writeHash() {
+  const p = new URLSearchParams({ cos: state.slots.filter(Boolean).join(","), tab: state.tab });
+  if (state.both) p.set("both", "1");
+  history.replaceState(null, "", "#" + p.toString());
+}
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  let list = (p.get("cos") || [p.get("a"), p.get("b")].filter(Boolean).join(",")).split(",").map(t => t.trim().toUpperCase()).filter(t => /^[A-Z0-9.\-]{1,12}$/.test(t));
+  list = [...new Set(list)].slice(0, MAX_SLOTS);
+  if (list.length >= 2) state.slots = list;
+  if (TABS.some(t => t.id === p.get("tab"))) state.tab = p.get("tab");
+  state.both = p.get("both") === "1";
+}
+
+/* ------------------------------------------------------------ live company search */
+const LS_PROXY = "secProxy";
+let secList = null, secListLoading = null, loadingSlot = null;
+const liveTokens = [];
+let pendingLoads = 0;
+
+function proxyBase() {
+  let v = "";
+  try { v = localStorage.getItem(LS_PROXY) || ""; } catch (e) { /* storage may be blocked */ }
+  return (v || window.SEC_PROXY || "").trim().replace(/\/+$/, "");
+}
+function labelOf(t) { const c = byTicker(t); return c ? `${c.ticker}: ${c.name}` : String(t || ""); }
+function setLive(text, isErr) {
+  const el = document.getElementById("liveMsg");
+  el.textContent = text || ""; el.className = "live" + (isErr ? " err" : "");
+}
+async function proxyGet(path) {
+  const base = proxyBase();
+  let res;
+  try { res = await fetch(base + path); }
+  catch (e) { throw new Error(`Could not reach the proxy at ${base}. Check the address and that the Worker is deployed.`); }
+  if (!res.ok) {
+    let msg = `The proxy answered ${res.status}.`;
+    try { const j = await res.json(); if (j.error) msg = j.error; } catch (e) { /* not JSON */ }
+    const err = new Error(msg); err.status = res.status; throw err;
+  }
+  return res.json();
+}
+async function proxyText(path) {
+  const base = proxyBase();
+  let res;
+  try { res = await fetch(base + path); }
+  catch (e) { throw new Error(`Could not reach the proxy at ${base}.`); }
+  if (!res.ok) { const err = new Error(`The proxy answered ${res.status}.`); err.status = res.status; throw err; }
+  return res.text();
+}
+// Scores each 10-K's Item 7 for length, uncertainty words and legal words, in the browser.
+async function loadTone(c, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    setLive(`Finding ${c.ticker}'s 10-K filings…`);
+    const subs = await proxyGet("/submissions/" + String(+c.cik)), r = subs.filings.recent;
+    const docs = new Map();
+    r.accessionNumber.forEach((a, i) => { if (r.form[i] === "10-K") docs.set(a, r.primaryDocument[i]); });
+    const todo = c.years.filter(y => y.filing_accn && docs.has(y.filing_accn));
+    if (!todo.length) throw new Error("Could not match this company's recent 10-K filings to its years.");
+    let done = 0, failed = 0;
+    const queue = todo.slice();
+    const work = async () => {
+      while (queue.length) {
+        const y = queue.shift();
+        try {
+          const html = await proxyText(`/doc/${+c.cik}/${y.filing_accn.replace(/-/g, "")}/${encodeURIComponent(docs.get(y.filing_accn))}`);
+          Object.assign(y, SecMda.wordShares(SecMda.extractMda(html))); done++;
+        } catch (e) { failed++; }
+        setLive(`Scoring ${c.ticker}'s MD&A: ${done + failed} of ${todo.length} filings…`);
+      }
+    };
+    await Promise.all([work(), work()]);
+    if (!done) throw new Error("None of the filings could be read. The proxy may not allow document downloads: redeploy the latest worker.");
+    c.tone_loaded = true;
+    render();
+    setLive(`Scored ${done} of ${todo.length} filings for ${c.ticker}.${failed ? " The rest could not be read or had no Item 7 heading." : ""}`, !!failed);
+  } catch (e) { setLive(e.message, true); if (btn) btn.disabled = false; }
+}
+function ensureTickers() {
+  if (secList) return Promise.resolve(secList);
+  if (!proxyBase()) return Promise.resolve(null);
+  if (!secListLoading) secListLoading = proxyGet("/tickers").then(j => {
+    secList = Object.values(j).map(r => ({ ticker: String(r.ticker), name: String(r.title), n: String(r.title).toLowerCase(), cik: String(r.cik_str).padStart(10, "0") }));
+    return secList;
+  }).finally(() => { secListLoading = null; });
+  return secListLoading;
+}
+// S&P 500 closes, used for "return vs the market". Optional: the page works without it.
+let benchmarkTried = false;
+async function ensureBenchmark() {
+  if (benchmark || benchmarkTried || !proxyBase()) return;
+  benchmarkTried = true;
+  try {
+    const { prices } = SecMetrics.parseYahoo(await proxyGet("/prices/%5EGSPC"));
+    benchmark = prices; companies.forEach(prepare); render();
+  } catch (e) { /* the stock tab simply shows no benchmark */ }
+}
+function searchCompanies(q) {
+  q = q.trim().toLowerCase();
+  const loaded = companies
+    .filter(c => !q || c.ticker.toLowerCase().startsWith(q) || c.name.toLowerCase().includes(q))
+    .map(c => ({ ticker: c.ticker, name: c.name, loaded: true }));
+  const live = [];
+  if (secList && q) {
+    const t = q.toUpperCase(), scored = [];
+    for (const r of secList) {
+      let s = -1;
+      if (r.ticker === t) s = 0; else if (r.ticker.startsWith(t)) s = 1; else if (r.n.startsWith(q)) s = 2;
+      else if (r.n.includes(" " + q)) s = 3; else if (r.n.includes(q)) s = 4;
+      if (s >= 0 && !byTicker(r.ticker)) scored.push([s, r]);
+    }
+    scored.sort((a, b) => a[0] - b[0] || a[1].name.length - b[1].name.length);
+    scored.slice(0, 40).forEach(x => live.push(x[1]));
+  }
+  return { loaded, live };
+}
+function afterSelectionChange() { refreshCompanies(); resetYears(); render(); }
+
+async function loadLive(i, item) {
+  const token = (liveTokens[i] = (liveTokens[i] || 0) + 1);
+  pendingLoads++;
+  setLive(`Loading ${item.name} (${item.ticker}) from the SEC. Large companies can take 10 to 30 seconds.`);
+  document.getElementById("panel").setAttribute("aria-busy", "true");
+  try {
+    const [factsR, pricesR] = await Promise.allSettled([
+      proxyGet("/facts/" + item.cik), proxyGet("/prices/" + encodeURIComponent(item.ticker))]);
+    if (token !== liveTokens[i]) return;                  // a newer pick replaced this one
+    if (factsR.status === "rejected") {
+      const e = factsR.reason;
+      throw new Error(e.status === 404 ? `The SEC has no financial data for ${item.name}. It may not file 10-Ks.` : e.message);
+    }
+    let prices = null, splits = [], warn = "";
+    if (pricesR.status === "fulfilled") {
+      try {
+        const parsed = SecMetrics.parseYahoo(pricesR.value);
+        prices = parsed.prices; splits = parsed.splits;
+        if (pricesR.value.source === "stooq") { splits = null; warn = " Prices came from a backup source that doesn't list stock splits, so market value and valuation ratios are blank."; }
+      } catch (e) { warn = " Share prices were not available, so market value and returns are blank."; }
+    } else warn = " Share prices were not available, so market value and returns are blank.";
+    const c = SecMetrics.makeCompany({ ticker: item.ticker, name: item.name, cik: item.cik, facts: factsR.value, prices, splits, years: 10 });
+    prepare(c);
+    companies = companies.filter(x => x.ticker !== c.ticker).concat(c).sort((p, q) => p.ticker.localeCompare(q.ticker));
+    setSlot(i, c.ticker);
+    afterSelectionChange();
+    setLive(`Loaded ${c.name}: FY${c.years[0].fy} to FY${c.years[c.years.length - 1].fy}.${warn}`, !!warn);
+    ensureBenchmark();
+  } catch (e) {
+    if (token === liveTokens[i]) { setLive(e.message, true); refreshCompanies(); }
+  } finally {
+    pendingLoads--;
+    if (!pendingLoads) document.getElementById("panel").removeAttribute("aria-busy");
+    if (token === liveTokens[i] && loadingSlot === i) loadingSlot = null;
+  }
+}
+
+function makeCombo(i) {
+  const input = document.getElementById("in" + i), list = document.getElementById("list" + i);
+  let items = [], active = -1, typed = false, navigated = false, origin = null, timer = null;
+  const optId = k => `opt${i}_${k}`;
+  const isOther = t => state.slots.some((x, j) => j !== i && x === t);
+  const close = () => { list.hidden = true; input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); active = -1; };
+  const restore = () => { input.value = labelOf(state.slots[i]); typed = false; };
+  // Show the highlighted company's numbers right away. Companies already loaded switch at once;
+  // SEC companies are fetched once the highlight has rested for a moment, so typing doesn't flood the proxy.
+  function autoApply(item) {
+    clearTimeout(timer);
+    if (!item || isOther(item.ticker)) return;
+    if (byTicker(item.ticker)) {
+      if (state.slots[i] === item.ticker) return;
+      liveTokens[i] = (liveTokens[i] || 0) + 1; setLive("");
+      state.slots[i] = item.ticker; resetYears(); render();
+    } else if (proxyBase()) {
+      timer = setTimeout(() => { if (items[active] === item) loadLive(i, item); }, 700);
+    }
+  }
+  function setActive(k, apply = true) {
+    if (!items.length) return;
+    active = (k + items.length) % items.length;
+    list.querySelectorAll('[role="option"]').forEach((el, n) => el.setAttribute("aria-selected", String(n === active)));
+    input.setAttribute("aria-activedescendant", optId(active));
+    list.querySelector("#" + optId(active))?.scrollIntoView({ block: "nearest" });
+    if (apply && (typed || navigated)) autoApply(items[active]);
+  }
+  function row(item, k) {
+    const li = h("li", { role: "option", id: optId(k), "aria-selected": "false" },
+      h("span", { class: "tk" }, item.ticker), h("span", { class: "nm" }, item.name), item.loaded ? h("span", { class: "tag" }, "loaded") : "");
+    li.addEventListener("mousedown", e => { e.preventDefault(); choose(item); });   // before the input blurs
+    li.addEventListener("mousemove", () => { if (active !== k) setActive(k, false); });
+    return li;
+  }
+  function draw() {
+    const q = typed ? input.value : "";
+    const { loaded, live } = searchCompanies(q);
+    items = [...loaded, ...live];
+    const nodes = [];
+    if (loaded.length) nodes.push(h("li", { class: "group", role: "presentation" }, "Already loaded"));
+    loaded.forEach(it => nodes.push(row(it, items.indexOf(it))));
+    if (live.length) nodes.push(h("li", { class: "group", role: "presentation" }, "SEC companies"));
+    live.forEach(it => nodes.push(row(it, items.indexOf(it))));
+    const hint = t => nodes.push(h("li", { class: "hint", role: "presentation" }, t));
+    if (!proxyBase()) hint(LIVE_OFF_HINT);
+    else if (!secList && secListLoading) hint("Loading the list of SEC companies…");
+    else if (q && !items.length) hint(`No company matches “${q}”.`);
+    else if (!q) hint("Type a name or ticker to search every SEC company.");
+    list.replaceChildren(...nodes);
+    list.hidden = false; input.setAttribute("aria-expanded", "true");
+    active = -1;
+    if (q && items.length) setActive(0);
+  }
+  async function open() {
+    draw();
+    if (proxyBase() && !secList) {
+      try { await ensureTickers(); if (document.activeElement === input) draw(); }
+      catch (e) { if (document.activeElement === input) { list.replaceChildren(h("li", { class: "hint", role: "presentation" }, e.message)); } }
+    }
+  }
+  function choose(item) {
+    clearTimeout(timer); close(); typed = false; navigated = false;
+    if (byTicker(item.ticker)) { liveTokens[i] = (liveTokens[i] || 0) + 1; setSlot(i, item.ticker); afterSelectionChange(); setLive(""); input.blur(); }
+    else { loadingSlot = i; input.value = `${item.ticker}: ${item.name}`; input.blur(); loadLive(i, item); }
+  }
+  input.addEventListener("focus", () => { origin = state.slots[i]; navigated = false; input.select(); open(); });
+  input.addEventListener("input", () => { typed = true; draw(); });
+  input.addEventListener("blur", () => { clearTimeout(timer); close(); navigated = false; if (loadingSlot !== i) restore(); });
+  input.addEventListener("keydown", e => {
+    if (e.key === "ArrowDown") { if (list.hidden) open(); else { navigated = true; setActive(active + 1); } e.preventDefault(); }
+    else if (e.key === "ArrowUp") { if (!list.hidden) { navigated = true; setActive(active - 1); } e.preventDefault(); }
+    else if (e.key === "Enter") { if (!list.hidden && items[active]) { choose(items[active]); } e.preventDefault(); }
+    else if (e.key === "Escape") {
+      clearTimeout(timer); liveTokens[i] = (liveTokens[i] || 0) + 1; close();
+      if (origin && state.slots[i] !== origin && byTicker(origin) && !isOther(origin)) { state.slots[i] = origin; resetYears(); render(); setLive(""); }
+      restore();
+    }
+  });
+}
+let LIVE_OFF_HINT = "Live search is off. Add your proxy address under “Search any SEC company” at the bottom of the page to search every SEC company.";
+
+function setupProxyBox() {
+  const input = document.getElementById("proxyIn"), msg = document.getElementById("proxyMsg");
+  input.value = proxyBase();
+  document.getElementById("proxySave").addEventListener("click", async () => {
+    const v = input.value.trim().replace(/\/+$/, "");
+    msg.className = "msg";
+    if (v && !/^https?:\/\//i.test(v)) { msg.className = "msg err"; msg.textContent = "The address must start with https://"; return; }
+    try { localStorage.setItem(LS_PROXY, v); } catch (e) { /* storage may be blocked */ }
+    secList = null; secListLoading = null; benchmarkTried = false;
+    if (!v) { msg.textContent = "Proxy removed. Live search is off."; return; }
+    msg.textContent = "Testing the connection…";
+    try { const list = await ensureTickers(); msg.textContent = `Connected. ${list.length.toLocaleString("en-US")} SEC companies are searchable.`; ensureBenchmark(); }
+    catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+  });
+}
+
+// Companies named in a shared link that are not bundled are fetched live, if a proxy is set.
+async function restoreLive(wanted) {
+  if (!wanted.length || !proxyBase()) return;
+  try { await ensureTickers(); } catch (e) { setLive(e.message, true); return; }
+  for (const t of wanted) {
+    const i = state.slots.indexOf(t), item = secList.find(r => r.ticker === t);
+    if (i >= 0 && item && !byTicker(t)) loadLive(i, item);
+  }
+}
+
+/* -------------------------------------------------------------- file loading */
+function loadCompanyFile(file) {
+  const msg = document.getElementById("fileMsg");
+  msg.className = "msg"; msg.textContent = "";
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const c = JSON.parse(reader.result);
+      if (!c || typeof c.ticker !== "string" || !Array.isArray(c.years) || !c.years.length || !c.years.every(y => Number.isInteger(y.fy)))
+        throw new Error("This doesn't look like a company file made by add_company.py.");
+      c.ticker = c.ticker.toUpperCase().slice(0, 12); c.name = String(c.name || c.ticker);
+      c.fiscal_year_end = String(c.fiscal_year_end || "");
+      prepare(c);
+      companies = companies.filter(x => x.ticker !== c.ticker).concat(c).sort((p, q) => p.ticker.localeCompare(q.ticker));
+      const last = state.slots.length - 1;
+      setSlot(last, c.ticker);
+      afterSelectionChange(); updateAddButton();
+      msg.textContent = FILE_ADDED_TEXT(c);
+    } catch (e) { msg.className = "msg err"; msg.textContent = e.message; }
+  };
+  reader.readAsText(file);
+}
+const FILE_ADDED_TEXT = c => `Added ${c.ticker} for this visit. Commit its file to data/ to keep it.`;
+
+/* ---------------------------------------------------------------------- theme */
+function applyTheme(mode) {
+  const root = document.documentElement;
+  if (mode === "auto") root.removeAttribute("data-theme"); else root.setAttribute("data-theme", mode);
+  document.getElementById("themeBtn").textContent = "Theme: " + mode;
+  try { localStorage.setItem("theme", mode); } catch (e) { /* storage may be blocked */ }
+}
+
+/* ----------------------------------------------------------------------- init */
+function init() {
+  let saved = "auto"; try { saved = localStorage.getItem("theme") || "auto"; } catch (e) { /* ignore */ }
+  applyTheme(["auto", "light", "dark"].includes(saved) ? saved : "auto");
+  document.getElementById("themeBtn").addEventListener("click", () => {
+    const order = ["auto", "dark", "light"], cur = document.documentElement.getAttribute("data-theme") || "auto";
+    applyTheme(order[(order.indexOf(cur) + 1) % 3]);
+  });
+
+  const tabs = document.getElementById("tabs");
+  TABS.forEach(t => tabs.append(h("button", { role: "tab", type: "button", "data-tab": t.id, onclick: () => { state.tab = t.id; render(); } }, t.title)));
+
+  if (!companies.length) { render(); return; }
+  const first = companies.some(c => c.ticker === "AAPL") ? "AAPL" : companies[0].ticker;
+  state.slots = [first, (companies.find(c => c.ticker !== first) || companies[0]).ticker];
+  readHash();
+  // names in the link that this page doesn't have: load them live if possible, otherwise swap in loaded ones
+  const unknown = state.slots.filter(t => !byTicker(t));
+  if (unknown.length && !proxyBase()) {
+    state.slots = state.slots.filter(t => byTicker(t));
+    for (const c of companies) if (state.slots.length < 2 && !state.slots.includes(c.ticker)) state.slots.push(c.ticker);
+  }
+  buildPickers(); resetYears(); setupProxyBox();
+  document.getElementById("addCo").addEventListener("click", addSlot);
+  document.getElementById("selFrom").addEventListener("change", e => { state.from = +e.target.value; if (state.to < state.from) { state.to = state.from; document.getElementById("selTo").value = state.to; } render(); });
+  document.getElementById("selTo").addEventListener("change", e => { state.to = +e.target.value; if (state.from > state.to) { state.from = state.to; document.getElementById("selFrom").value = state.from; } render(); });
+  const both = document.getElementById("chkBoth"); both.checked = state.both;
+  both.addEventListener("change", () => { state.both = both.checked; render(); });
+  document.getElementById("fileIn").addEventListener("change", e => { if (e.target.files[0]) loadCompanyFile(e.target.files[0]); e.target.value = ""; });
+  const share = document.getElementById("shareBtn"), print = document.getElementById("printBtn");
+  if (CAN_EXPORT) {
+    share.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(location.href); setLive("Link copied. It reopens this comparison."); }
+      catch (e) { setLive("Copying was blocked. The link is in the address bar.", true); }
+    });
+    print.addEventListener("click", () => window.print());
+  } else { share.hidden = true; print.hidden = true; }
+  render();
+  if (proxyBase()) ensureBenchmark();
+  restoreLive(unknown);
+}
+init();
+</script>
+</body>
+</html>

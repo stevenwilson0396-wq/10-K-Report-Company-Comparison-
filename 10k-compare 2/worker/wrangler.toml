@@ -1,0 +1,10 @@
+name = "sec-proxy"
+main = "sec-proxy.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Required by the SEC: who is making these requests. Change this to your name and email.
+SEC_USER_AGENT = "Your Name you@example.com"
+# Optional: only let your own site use the proxy, e.g. "https://yourname.github.io".
+# Leave as "*" to allow any site.
+ALLOWED_ORIGIN = "*"
