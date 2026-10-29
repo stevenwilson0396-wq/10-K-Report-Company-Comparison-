@@ -2,4 +2,4 @@
 //   window.SEC_PROXY = "https://sec-proxy.yourname.workers.dev";
 // Leave it empty to use only the companies in data/. A visitor can also paste an address
 // into the "Compare a different company" box on the page; that overrides this value.
-window.SEC_PROXY = "";
+window.SEC_PROXY = "https://sec-proxystevenwilson0396workersdev.stevenwilson0396.workers.dev";
